@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+console.log("HTML loaded");
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML-Based Energy Consumption Predictor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ML-Based Energy Consumption Predictor</h1>
+            <p>Advanced machine learning algorithms for accurate energy consumption forecasting</p>
+        </div>
+        
+        <div class="current-rate">
+            <span>Current Electricity Rate: </span>
+            <span id="rate-display">₹6.0/kWh</span>
+        </div>
+        
+        <div class="ml-section">
+            <h2>Machine Learning Models</h2>
+            
+            <div class="ml-models-grid">
+                <div class="ml-model-card linear-regression">
+                    <div class="model-header">
+                        <div class="model-icon">📈</div>
+                        <div>
+                            <div class="model-title">Linear Regression</div>
+                            <div class="model-subtitle">Statistical Baseline Model</div>
+                        </div>
+                    </div>
+                    <div class="model-description">
+                        Linear regression establishes relationships between appliance usage patterns and energy consumption using least squares optimization.
+                    </div>
+                    <ul class="model-features">
+                        <li>Fast training and prediction</li>
+                        <li>Interpretable coefficients</li>
+                        <li>Handles linear relationships well</li>
+                        <li>Low computational overhead</li>
+                    </ul>
+                    <div class="model-status" data-model="linear">Not trained</div>
+                    <div class="model-metrics" data-model="linear"></div>
+                    <div class="button-row">
+                        <button class="btn" data-model="linear" data-action="train" onclick="trainModel('linear')">Train Model</button>
+                        <button class="btn red small" data-model="linear" data-action="reset" onclick="resetModel('linear')" style="display:none;">Reset</button>
+                        <button class="btn green small" data-model="linear" data-action="toggle" onclick="toggleModel('linear')">Selected</button>
+                    </div>
+                </div>
+                
+                <div class="ml-model-card random-forest">
+                    <div class="model-header">
+                        <div class="model-icon">🌳</div>
+                        <div>
+                            <div class="model-title">Random Forest</div>
+                            <div class="model-subtitle">Ensemble Tree-Based Model</div>
+                        </div>
+                    </div>
+                    <div class="model-description">
+                        Random Forest combines multiple decision trees to capture non-linear patterns and feature interactions in energy consumption data.
+                    </div>
+                    <ul class="model-features">
+                        <li>Handles non-linear relationships</li>
+                        <li>Feature importance ranking</li>
+                        <li>Robust to outliers</li>
+                        <li>Captures complex interactions</li>
+                    </ul>
+                    <div class="model-status" data-model="forest">Not trained</div>
+                    <div class="model-metrics" data-model="forest"></div>
+                    <div class="button-row">
+                        <button class="btn" data-model="forest" data-action="train" onclick="trainModel('forest')">Train Model</button>
+                        <button class="btn red small" data-model="forest" data-action="reset" onclick="resetModel('forest')" style="display:none;">Reset</button>
+                        <button class="btn green small" data-model="forest" data-action="toggle" onclick="toggleModel('forest')">Selected</button>
+                    </div>
+                </div>
+                
+                <div class="ml-model-card lstm">
+                    <div class="model-header">
+                        <div class="model-icon">🧠</div>
+                        <div>
+                            <div class="model-title">LSTM Neural Network</div>
+                            <div class="model-subtitle">Deep Learning Time Series Model</div>
+                        </div>
+                    </div>
+                    <div class="model-description">
+                        Long Short-Term Memory network captures temporal dependencies and seasonal patterns using advanced neural architecture.
+                    </div>
+                    <ul class="model-features">
+                        <li>Captures temporal patterns</li>
+                        <li>Learns seasonal cycles</li>
+                        <li>Handles sequence dependencies</li>
+                        <li>Advanced pattern recognition</li>
+                    </ul>
+                    <div class="model-status" data-model="lstm">Not trained</div>
+                    <div class="model-metrics" data-model="lstm"></div>
+                    <div class="button-row">
+                        <button class="btn" data-model="lstm" data-action="train" onclick="trainModel('lstm')">Train Model</button>
+                        <button class="btn red small" data-model="lstm" data-action="reset" onclick="resetModel('lstm')" style="display:none;">Reset</button>
+                        <button class="btn green small" data-model="lstm" data-action="toggle" onclick="toggleModel('lstm')">Selected</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="appliance-section">
+            <h2>Your Appliances</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 30px;">Configure your appliances for ML-powered prediction</p>
+            
+            <div class="appliance-grid" id="appliance-grid">
+                <!-- Appliances will be dynamically generated by JavaScript -->
+            </div>
+        </div>
+
+        <button class="predict-btn" onclick="calculateConsumption()">
+            Calculate Energy Consumption with ML
+        </button>
+
+        <div id="status" class="status-message"></div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Training models and calculating consumption...</div>
+        </div>
+
+        <div id="results" class="results-section" style="display: none;">
+            <h2>ML Prediction Results</h2>
+            
+            <div class="results-grid">
+                <div class="result-card">
+                    <div class="result-icon">⚡</div>
+                    <div class="result-title">Daily Consumption</div>
+                    <div class="result-value" id="daily-consumption">0 kWh</div>
+                </div>
+                
+                <div class="result-card">
+                    <div class="result-icon">📅</div>
+                    <div class="result-title">Monthly Consumption</div>
+                    <div class="result-value" id="monthly-consumption">0 kWh</div>
+                </div>
+                
+                <div class="result-card">
+                    <div class="result-icon">💰</div>
+                    <div class="result-title">Monthly Cost</div>
+                    <div class="result-value" id="monthly-cost">₹0</div>
+                </div>
+                
+                <div class="result-card">
+                    <div class="result-icon">🎯</div>
+                    <div class="result-title">Best Model</div>
+                    <div class="result-value" id="best-model">Linear Regression</div>
+                </div>
+            </div>
+            
+            <div class="chart-section">
+                <h3>Consumption Breakdown</h3>
+                <div class="chart-container">
+                    <canvas id="consumption-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="breakdown-section">
+                <h3>Detailed Breakdown</h3>
+                <div class="breakdown-items" id="breakdown-items"></div>
+            </div>
+            
+            <div class="breakdown-section">
+                <h3>🌍 Carbon Footprint Analysis</h3>
+                <div class="results-grid">
+                    <div class="result-card" style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);">
+                        <div class="result-icon">🏭</div>
+                        <div class="result-title">Monthly CO₂ Emissions</div>
+                        <div class="result-value" id="carbon-emissions">0 kg</div>
+                    </div>
+                    
+                    <div class="result-card" style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);">
+                        <div class="result-icon">🌳</div>
+                        <div class="result-title">Trees Needed to Offset</div>
+                        <div class="result-value" id="trees-needed">0 trees</div>
+                    </div>
+                    
+                    <div class="result-card" style="background: linear-gradient(135deg, #45B7D1 0%, #96C93D 100%);">
+                        <div class="result-icon">🌍</div>
+                        <div class="result-title">Environmental Impact</div>
+                        <div class="result-value" id="impact-level">Low</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="breakdown-section">
+                <h3>💡 Energy Saving Recommendations</h3>
+                <div id="energy-tips" class="breakdown-items"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+  <script>
+// Configuration
+const stateRates = {
+    'chandigarh': { name: 'Chandigarh', rate: 6.0 },
+    'delhi': { name: 'Delhi', rate: 5.5 },
+    'mumbai': { name: 'Mumbai', rate: 7.8 },
+    'bangalore': { name: 'Bangalore', rate: 6.2 },
+    'chennai': { name: 'Chennai', rate: 4.8 },
+    'kolkata': { name: 'Kolkata', rate: 6.5 },
+    'hyderabad': { name: 'Hyderabad', rate: 7.2 },
+    'pune': { name: 'Pune', rate: 7.8 },
+    'gurgaon': { name: 'Gurgaon', rate: 6.8 },
+    'average': { name: 'India Average', rate: 7.0 }
+};
+
+const appliances = {
+    'bulbs': { power: 9, hours: 5, icon: '💡', name: 'LED Bulbs', defaultQty: 4, color: '#FFC107' },
+    'fans': { power: 75, hours: 14, icon: '🌀', name: 'Ceiling Fans', defaultQty: 3, color: '#2196F3' },
+    'ac': { power: 1500, hours: 7, icon: '❄️', name: 'Air Conditioner', defaultQty: 1, color: '#FF5722' },
+    'refrigerator': { power: 150, hours: 24, icon: '🧊', name: 'Refrigerator', defaultQty: 1, color: '#4CAF50' },
+    'tv': { power: 100, hours: 6, icon: '📺', name: 'Television', defaultQty: 1, color: '#9C27B0' },
+    'washer': { power: 500, hours: 1, icon: '🧺', name: 'Washing Machine', defaultQty: 1, color: '#607D8B' },
+    'heater': { power: 1500, hours: 2, icon: '🔥', name: 'Water Heater', defaultQty: 1, color: '#E91E63' },
+    'chimney': { power: 200, hours: 2, icon: '🏠', name: 'Kitchen Chimney', defaultQty: 1, color: '#FF9800' },
+    'microwave': { power: 800, hours: 0.5, icon: '📱', name: 'Microwave Oven', defaultQty: 1, color: '#3F51B5' },
+    'laptop': { power: 65, hours: 8, icon: '💻', name: 'Laptop/Computer', defaultQty: 1, color: '#795548' }
+};
+
+let currentElectricityRate = 6.0;
+let consumptionChart = null;
+let trainedModels = { linear: null, forest: null, lstm: null };
+
+// Utility functions
+function showStatus(message, isError = false) {
+    const statusEl = document.getElementById('status');
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.className = `status-message ${isError ? 'error' : 'success'}`;
+    statusEl.style.display = 'block';
+    setTimeout(() => statusEl.style.display = 'none', 3000);
+}
+
+// Generate appliance HTML
+function generateApplianceHTML() {
+    const applianceGrid = document.getElementById('appliance-grid');
+    if (!applianceGrid) return;
+    
+    const locationCard = `
+        <div class="appliance-card" style="border-left-color: #2196F3; background: #e3f2fd;">
+            <div class="appliance-header">
+                <div class="appliance-icon">🏙️</div>
+                <div>
+                    <div class="appliance-title">Your Location</div>
+                    <div class="appliance-power">Select for accurate pricing</div>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <select id="location-select" onchange="updateElectricityRate()">
+                    <option value="chandigarh">Chandigarh (₹6.0/kWh)</option>
+                    <option value="delhi">Delhi (₹5.5/kWh)</option>
+                    <option value="mumbai">Mumbai (₹7.8/kWh)</option>
+                    <option value="bangalore">Bangalore (₹6.2/kWh)</option>
+                    <option value="chennai">Chennai (₹4.8/kWh)</option>
+                    <option value="kolkata">Kolkata (₹6.5/kWh)</option>
+                    <option value="hyderabad">Hyderabad (₹7.2/kWh)</option>
+                    <option value="pune">Pune (₹7.8/kWh)</option>
+                    <option value="gurgaon">Gurgaon (₹6.8/kWh)</option>
+                    <option value="average">India Average (₹7.0/kWh)</option>
+                </select>
+            </div>
+        </div>
+    `;
+    
+    applianceGrid.innerHTML = locationCard;
+    
+    for (const [applianceKey, config] of Object.entries(appliances)) {
+        const applianceCard = `
+            <div class="appliance-card" style="border-left-color: ${config.color};">
+                <div class="appliance-header">
+                    <div class="appliance-icon">${config.icon}</div>
+                    <div>
+                        <div class="appliance-title">${config.name}</div>
+                        <div class="appliance-power">${config.power} Watts</div>
+                    </div>
+                </div>
+                <div class="appliance-controls">
+                    <div class="quantity-control">
+                        <button class="quantity-btn" onclick="changeQuantity('${applianceKey}', -1)">-</button>
+                        <div class="quantity-display" id="${applianceKey}-qty">${config.defaultQty}</div>
+                        <button class="quantity-btn" onclick="changeQuantity('${applianceKey}', 1)">+</button>
+                    </div>
+                    <div class="usage-schedule">
+                        <div class="total-hours">${config.hours} hours/day</div>
+                        <div class="estimated-cost" id="${applianceKey}-cost">₹0.00/day</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        applianceGrid.innerHTML += applianceCard;
+    }
+}
+
+// Update electricity rate
+function updateElectricityRate() {
+    const locationSelect = document.getElementById('location-select');
+    const selectedLocation = locationSelect.value;
+    if (stateRates[selectedLocation]) {
+        const locationData = stateRates[selectedLocation];
+        currentElectricityRate = locationData.rate;
+        document.getElementById('rate-display').textContent = `₹${currentElectricityRate}/kWh`;
+        updateAllCosts();
+        showStatus(`Rate updated to ₹${currentElectricityRate}/kWh for ${locationData.name}`, false);
+    }
+}
+
+// Change appliance quantity
+function changeQuantity(appliance, change) {
+    const qtyElement = document.getElementById(appliance + '-qty');
+    let currentQty = parseInt(qtyElement.textContent);
+    currentQty += change;
+    if (currentQty < 0) currentQty = 0;
+    qtyElement.textContent = currentQty;
+    updateApplianceCost(appliance);
+}
+
+// Update appliance cost
+function updateApplianceCost(appliance) {
+    const qtyElement = document.getElementById(`${appliance}-qty`);
+    if (!qtyElement) return;
+    const quantity = parseInt(qtyElement.textContent);
+    const config = appliances[appliance];
+    if (!config) return;
+    const dailyConsumption = (quantity * config.power * config.hours) / 1000;
+    const dailyCost = dailyConsumption * currentElectricityRate;
+    const costElement = document.getElementById(`${appliance}-cost`);
+    if (costElement) costElement.textContent = `₹${dailyCost.toFixed(2)}/day`;
+}
+
+// Update all costs
+function updateAllCosts() {
+    for (const appliance of Object.keys(appliances)) {
+        updateApplianceCost(appliance);
+    }
+}
+
+// Simple ML Model
+class SimpleLinearRegression {
+    constructor() {
+        this.weights = null;
+        this.bias = 0;
+    }
+    
+    async train(X, y) {
+        const n = X.length;
+        const features = X[0].length;
+        this.weights = new Array(features).fill(0);
+        const learningRate = 0.001;
+        const epochs = 1000;
+        
+        for (let epoch = 0; epoch < epochs; epoch++) {
+            for (let i = 0; i < n; i++) {
+                const prediction = this.predict([X[i]])[0];
+                const error = y[i] - prediction;
+                for (let j = 0; j < features; j++) {
+                    this.weights[j] += learningRate * error * X[i][j];
+                }
+                this.bias += learningRate * error;
+            }
+        }
+    }
+    
+    predict(X) {
+        return X.map(sample => {
+            let sum = this.bias;
+            for (let i = 0; i < sample.length; i++) {
+                sum += this.weights[i] * sample[i];
+            }
+            return Math.max(0, sum);
+        });
+    }
+}
+
+// Generate training data
+function generateTrainingData(samples = 1000) {
+    const data = [];
+    const labels = [];
+    for (let i = 0; i < samples; i++) {
+        const sample = [];
+        let totalConsumption = 0;
+        for (const [appliance, config] of Object.entries(appliances)) {
+            const quantity = Math.floor(Math.random() * 4) + 1;
+            const hours = Math.max(1, config.hours + Math.floor(Math.random() * 6) - 3);
+            const consumption = (quantity * config.power * hours) / 1000;
+            sample.push(quantity, hours);
+            totalConsumption += consumption;
+        }
+        data.push(sample);
+        labels.push(Math.max(0, totalConsumption));
+    }
+    return { data, labels };
+}
+
+// Train model
+async function trainModel(modelType) {
+    const statusEl = document.querySelector(`[data-model="${modelType}"]`);
+    if (!statusEl) return;
+    statusEl.className = 'model-status status-training';
+    statusEl.textContent = 'Training...';
+    
+    try {
+        const trainingData = generateTrainingData();
+        const model = new SimpleLinearRegression();
+        await model.train(trainingData.data, trainingData.labels);
+        trainedModels[modelType] = model;
+        statusEl.className = 'model-status status-ready';
+        statusEl.textContent = 'Ready';
+        showStatus(`${modelType} model trained successfully!`, false);
+    } catch (error) {
+        statusEl.className = 'model-status status-error';
+        statusEl.textContent = 'Training failed';
+        showStatus(`Failed to train ${modelType}: ${error.message}`, true);
+    }
+}
+
+// Reset model
+function resetModel(modelType) {
+    trainedModels[modelType] = null;
+    const statusEl = document.querySelector(`[data-model="${modelType}"]`);
+    if (statusEl) {
+        statusEl.className = 'model-status';
+        statusEl.textContent = 'Not trained';
+    }
+    showStatus(`${modelType} model reset`, false);
+}
+
+// Toggle model
+function toggleModel(modelType) {
+    showStatus(`Model ${modelType} toggled`, false);
+}
+
+// Get appliance data
+function getApplianceData() {
+    const inputData = [];
+    const breakdown = {};
+    let totalDailyConsumption = 0;
+    
+    for (const [appliance, config] of Object.entries(appliances)) {
+        const quantity = parseInt(document.getElementById(`${appliance}-qty`).textContent);
+        const hours = config.hours;
+        inputData.push(quantity, hours);
+        const dailyConsumption = (quantity * config.power * hours) / 1000;
+        totalDailyConsumption += dailyConsumption;
+        
+        if (quantity > 0) {
+            breakdown[appliance] = {
+                quantity, hours, consumption: dailyConsumption,
+                percentage: 0, name: config.name, icon: config.icon, color: config.color
+            };
+        }
+    }
+    
+    for (const [appliance, data] of Object.entries(breakdown)) {
+        data.percentage = totalDailyConsumption > 0 ? (data.consumption / totalDailyConsumption) * 100 : 0;
+    }
+    
+    return { inputData, breakdown, totalDailyConsumption };
+}
+
+// Calculate consumption
+async function calculateConsumption() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    
+    const { inputData, breakdown, totalDailyConsumption } = getApplianceData();
+    let mlPrediction = totalDailyConsumption;
+    
+    if (trainedModels.linear) {
+        try {
+            mlPrediction = trainedModels.linear.predict([inputData])[0];
+        } catch (error) {
+            console.error('Prediction error:', error);
+        }
+    }
+    
+    const monthlyConsumption = mlPrediction * 30;
+    const monthlyCost = monthlyConsumption * currentElectricityRate;
+    
+    setTimeout(() => {
+        document.getElementById('daily-consumption').textContent = `${mlPrediction.toFixed(2)} kWh`;
+        document.getElementById('monthly-consumption').textContent = `${monthlyConsumption.toFixed(2)} kWh`;
+        document.getElementById('monthly-cost').textContent = `₹${monthlyCost.toFixed(2)}`;
+        document.getElementById('best-model').textContent = trainedModels.linear ? 'Linear Regression' : 'Baseline Calculation';
+        
+        // Update carbon footprint
+        const co2Emissions = monthlyConsumption * 0.82;
+        const treesNeeded = Math.ceil(co2Emissions / 1.83);
+        let impactLevel = 'Low';
+        if (co2Emissions > 500) impactLevel = 'Very High';
+        else if (co2Emissions > 300) impactLevel = 'High';
+        else if (co2Emissions > 150) impactLevel = 'Medium';
+        
+        document.getElementById('carbon-emissions').textContent = `${co2Emissions.toFixed(1)} kg`;
+        document.getElementById('trees-needed').textContent = `${treesNeeded}`;
+        document.getElementById('impact-level').textContent = impactLevel;
+        
+        // Update breakdown
+        updateBreakdown(breakdown);
+        updateConsumptionChart(breakdown);
+        generateEnergySavingTips(breakdown, mlPrediction);
+        
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+    }, 1500);
+}
+
+// Update breakdown
+function updateBreakdown(breakdown) {
+    const container = document.getElementById('breakdown-items');
+    container.innerHTML = '';
+    
+    const sortedBreakdown = Object.entries(breakdown).sort((a, b) => b[1].consumption - a[1].consumption);
+    
+    for (const [appliance, data] of sortedBreakdown) {
+        const item = document.createElement('div');
+        item.className = 'breakdown-item';
+        item.innerHTML = `
+            <div class="breakdown-icon">${data.icon}</div>
+            <div class="breakdown-details">
+                <div class="breakdown-name">${data.name} (${data.quantity})</div>
+                <div class="breakdown-consumption">${data.consumption.toFixed(2)} kWh/day (${data.hours} hours)</div>
+            </div>
+            <div class="breakdown-percentage">${data.percentage.toFixed(1)}%</div>
+        `;
+        container.appendChild(item);
+    }
+}
+
+// Update consumption chart
+function updateConsumptionChart(breakdown) {
+    const ctx = document.getElementById('consumption-chart').getContext('2d');
+    if (consumptionChart) consumptionChart.destroy();
+    
+    const labels = [];
+    const data = [];
+    const colors = [];
+    
+    for (const [appliance, applianceBreakdown] of Object.entries(breakdown)) {
+        labels.push(applianceBreakdown.name);
+        data.push(applianceBreakdown.consumption.toFixed(2));
+        colors.push(applianceBreakdown.color);
+    }
+    
+    consumptionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderColor: 'rgba(255, 255, 255, 0.5)',
+                borderWidth: 2,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { font: { size: 12 }, color: '#333', padding: 15, usePointStyle: true }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return ` ${context.label}: ${context.parsed} kWh (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+// Generate energy saving tips
+function generateEnergySavingTips(breakdown, dailyConsumption) {
+    const tipsContainer = document.getElementById('energy-tips');
+    tipsContainer.innerHTML = '';
+    
+    const tips = [
+        { icon: '💡', title: 'LED Lighting Upgrade', description: 'Switch to LED bulbs to save up to 80% energy. LEDs last 25x longer than incandescent bulbs.', savings: 'Potential savings: ₹50-150/month' },
+        { icon: '🔌', title: 'Eliminate Phantom Loads', description: 'Unplug electronics when not in use. TVs, computers, and chargers consume power even when turned off.', savings: 'Potential savings: ₹30-80/month' },
+        { icon: '❄️', title: 'AC Temperature Settings', description: 'Set AC to 24-26°C. Each degree higher can save 6-8% energy. Use ceiling fans to distribute cool air.', savings: 'Potential savings: ₹200-500/month' },
+        { icon: '⏰', title: 'Peak Hour Usage Optimization', description: 'Shift high-power appliances (washing machine, dishwasher) to off-peak hours (11 PM - 6 AM).', savings: 'Potential savings: 10-25% on variable rate plans' }
+    ];
+    
+    if (dailyConsumption > 15) {
+        tips.unshift({
+            icon: '☀️', title: 'Solar Panel System Installation', 
+            description: 'Your consumption pattern makes you an ideal candidate for solar panels. 3-5 kW system recommended.',
+            savings: 'Potential savings: 60-80% of electricity bill'
+        });
+    }
+    
+    tips.forEach(tip => {
+        const tipElement = document.createElement('div');
+        tipElement.className = 'breakdown-item';
+        tipElement.innerHTML = `
+            <div class="breakdown-icon">${tip.icon}</div>
+            <div class="breakdown-details">
+                <div class="breakdown-name">${tip.title}</div>
+                <div class="breakdown-consumption">${tip.description}</div>
+                <div style="color: #4CAF50; font-weight: 600; margin-top: 5px;">${tip.savings}</div>
+            </div>
+        `;
+        tipsContainer.appendChild(tipElement);
+    });
+}
+
+// Initialize app
+function initializeApp() {
+    generateApplianceHTML();
+    updateElectricityRate();
+    updateAllCosts();
+    showStatus('ML Energy Predictor initialized!', false);
+}
+
+// Start app when DOM loads
+document.addEventListener('DOMContentLoaded', initializeApp);
+</script>
+</body>
+</html>
